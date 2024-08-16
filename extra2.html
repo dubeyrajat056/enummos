@@ -1,0 +1,126 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Expenditure</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 20px;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-bottom: 20px;
+        }
+
+        th,
+        td {
+            border: 1px solid #ddd;
+            padding: 8px;
+            text-align: left;
+        }
+
+        th {
+            background-color: #f2f2f2;
+        }
+
+        button {
+            padding: 10px 15px;
+            margin: 5px;
+            border: none;
+            border-radius: 5px;
+            color: white;
+            cursor: pointer;
+            background-color: #14128b
+        }
+
+        #showForm {
+            background-color: #2196F3;
+        }
+
+        #backToMain {
+            background-color: #4CAF50;
+        }
+
+        .hidden {
+            display: none;
+        }
+
+        a {
+            text-decoration: none;
+            color: white;
+        }
+    </style>
+</head>
+
+<body>
+    <h1>Expenditure</h1>
+
+    <div id="expenditureForm" class="hidden">
+        <h2>Enter Expenditure</h2>
+        <label for="expenditureDescription">Description:</label>
+        <textarea id="expenditureDescription"></textarea>
+        <label for="expenditureAmount">Amount:</label>
+        <input type="number" id="expenditureAmount">
+        <button onclick="submitExpenditure()">Submit</button>
+    </div>
+
+    <div id="expenditureTableContainer">
+        <button id="showForm">Show Form</button>
+        <h2>Expenditure Table</h2>
+        <table id="expenditureTable">
+            <thead>
+                <tr>
+                    <th>Description</th>
+                    <th>Amount</th>
+                    <th>Date</th>
+                </tr>
+            </thead>
+            <tbody></tbody>
+        </table>
+    </div>
+
+    <button id="backToMain"><a href="try.html">Back to Main</a></button>
+
+    <script>
+        let expenditures = JSON.parse(localStorage.getItem('expenditures')) || [];
+        let expenditureTable = document.getElementById('expenditureTable').getElementsByTagName('tbody')[0];
+        let expenditureForm = document.getElementById('expenditureForm');
+        let showFormButton = document.getElementById('showForm');
+
+        function submitExpenditure() {
+            let description = document.getElementById('expenditureDescription').value;
+            let amount = parseFloat(document.getElementById('expenditureAmount').value);
+
+            if (description && amount) {
+                expenditures.push({ description, amount, date: new Date().toLocaleDateString() });
+                localStorage.setItem('expenditures', JSON.stringify(expenditures));
+                showExpenditureTable();
+                document.getElementById('expenditureDescription').value = '';
+                document.getElementById('expenditureAmount').value = '';
+            }
+        }
+
+        function showExpenditureTable() {
+            expenditureTable.innerHTML = '';
+            expenditures.forEach(exp => {
+                let row = expenditureTable.insertRow();
+                row.insertCell(0).textContent = exp.description;
+                row.insertCell(1).textContent = `${exp.amount.toFixed(2)}`;
+                row.insertCell(2).textContent = exp.date;
+            });
+        }
+
+        showFormButton.addEventListener('click', function () {
+            expenditureForm.classList.toggle('hidden');
+        });
+
+        showExpenditureTable();
+    </script>
+</body>
+
+</html>

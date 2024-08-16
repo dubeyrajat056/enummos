@@ -1,0 +1,259 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Transaction Table</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 20px;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-bottom: 20px;
+        }
+
+        th,
+        td {
+            border: 1px solid #ddd;
+            padding: 8px;
+            text-align: left;
+        }
+
+        th {
+            background-color: #f2f2f2;
+        }
+
+        button {
+            padding: 10px 15px;
+            margin: 5px;
+            border: none;
+            border-radius: 5px;
+            color: white;
+            background-color:#14128b;
+            cursor: pointer;
+        }
+
+        #enterExpenditure {
+            background-color: #4CAF50;
+        }
+
+        #summary {
+            background-color: #2196F3;
+        }
+
+        #payment {
+            background-color: #f44336;
+        }
+
+        .hidden {
+            display: none;
+        }
+
+        a {
+            color: white;
+            text-decoration: none;
+        }
+    </style>
+</head>
+
+<body>
+    <h1>Transaction Table</h1>
+    <table id="transactionTable">
+        <thead>
+            <tr>
+                <th>Sr. No.</th>
+                <th>Name</th>
+                <th>Amount</th>
+                <th>Date</th>
+            </tr>
+        </thead>
+        <tbody id="transactionBody">
+            <!-- Rows will be populated dynamically -->
+        </tbody>
+    </table>
+
+    <button id="enterExpenditure"><a href="extra2.html">Enter Expenditure</a></button>
+    <button id="summary">Summary</button>
+    <button id="payment">Payment</button>
+
+    <!-- Payment Form -->
+    <div id="paymentForm" class="hidden">
+        <h2>Payment Received</h2>
+        <label for="paymentName">Name:</label>
+        <select id="paymentName"></select>
+        <label for="paymentAmount">Amount:</label>
+        <input type="number" id="paymentAmount">
+        <label for="paymentDate">Date:</label>
+        <input type="date" id="paymentDate">
+        <button onclick="submitPayment()">Submit</button>
+    </div>
+
+    <!-- Summary Report -->
+    <div id="summaryReport" class="hidden">
+        <h2>Summary Report</h2>
+        <div id="summaryContent"></div>
+        <button id="downloadReport" class="hidden">Download Report</button>
+    </div>
+
+    <button id="downloadMonthlyReport" class="hidden">Download Monthly Report</button>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <script>
+        const names = ["John Doe", "Jane Smith", "Alice Johnson", "Bob Brown", "Charlie Davis", "Eve White", "Frank Green", "Grace Black"];
+        let payments = JSON.parse(localStorage.getItem('payments')) || [];
+        let expenditures = JSON.parse(localStorage.getItem('expenditures')) || [];
+        let currentMonth = new Date().toLocaleString('default', { month: 'long' });
+        let currentYear = new Date().getFullYear();
+
+        document.addEventListener("DOMContentLoaded", () => {
+            populateTable();
+            populateNameSelect();
+            checkEndOfMonth();
+        });
+
+        function populateTable() {
+            const tbody = document.getElementById('transactionBody');
+            tbody.innerHTML = '';
+            payments.forEach((payment, index) => {
+                let row = tbody.insertRow();
+                row.insertCell(0).textContent = index + 1;
+                row.insertCell(1).textContent = payment.name;
+                row.insertCell(2).textContent = `${payment.amount.toFixed(2)}`;
+                row.insertCell(3).textContent = payment.date;
+            });
+        }
+
+        function populateNameSelect() {
+            const nameSelect = document.getElementById('paymentName');
+            nameSelect.innerHTML = '';
+            names.forEach(name => {
+                let option = document.createElement('option');
+                option.value = name;
+                option.textContent = name;
+                nameSelect.appendChild(option);
+            });
+        }
+
+        function submitPayment() {
+            const name = document.getElementById('paymentName').value;
+            const amount = parseFloat(document.getElementById('paymentAmount').value);
+            const date = document.getElementById('paymentDate').value;
+
+            if (name && amount && date) {
+                const existingPayment = payments.find(p => p.name === name && p.date === date);
+
+                if (existingPayment) {
+                    existingPayment.amount += amount;
+                } else {
+                    payments.push({ name, amount, date });
+                }
+
+                localStorage.setItem('payments', JSON.stringify(payments));
+                populateTable();
+                document.getElementById('paymentForm').classList.add('hidden');
+            }
+        }
+
+        function showSummary() {
+            let paymentTotal = payments.reduce((sum, payment) => sum + payment.amount, 0);
+            let expenditureTotal = expenditures.reduce((sum, exp) => sum + exp.amount, 0);
+            let balance = paymentTotal - expenditureTotal;
+
+            let paymentSummary = `<h3>Payments Received</h3><ul>`;
+            payments.forEach(payment => {
+                paymentSummary += `<li>${payment.name}: ${payment.amount.toFixed(2)} on ${payment.date}</li>`;
+            });
+            paymentSummary += `</ul><p><strong>Total Payments: ${paymentTotal.toFixed(2)}</strong></p>`;
+
+            let expenditureSummary = `<h3>Expenditures</h3><ul>`;
+            expenditures.forEach(exp => {
+                expenditureSummary += `<li>${exp.date}: ${exp.description} - ${exp.amount.toFixed(2)}</li>`;
+            });
+            expenditureSummary += `</ul><p><strong>Total Expenditures: ${expenditureTotal.toFixed(2)}</strong></p>`;
+
+            document.getElementById('summaryContent').innerHTML = paymentSummary + expenditureSummary +
+                `<h3>Balance: ${balance.toFixed(2)}</h3>`;
+            document.getElementById('summaryReport').classList.remove('hidden');
+            document.getElementById('downloadReport').classList.remove('hidden');
+        }
+
+        function downloadSummaryReport() {
+            const { jsPDF } = window.jspdf;
+            const doc = new jsPDF();
+
+            doc.text('Summary Report', 10, 10);
+
+            let paymentTotal = payments.reduce((sum, payment) => sum + payment.amount, 0);
+            let expenditureTotal = expenditures.reduce((sum, exp) => sum + exp.amount, 0);
+            let balance = paymentTotal - expenditureTotal;
+
+            doc.text('Payments Received:', 10, 20);
+            payments.forEach((payment, index) => {
+                doc.text(`${index + 1}. ${payment.name}: ${payment.amount.toFixed(2)} on ${payment.date}`, 10, 30 + index * 10);
+            });
+
+            doc.text('Total Payments: $' + paymentTotal.toFixed(2), 10, 40 + payments.length * 10);
+
+            doc.text('Expenditures:', 10, 50 + payments.length * 10);
+            expenditures.forEach((exp, index) => {
+                doc.text(`${index + 1}. ${exp.date}: ${exp.description} - ${exp.amount.toFixed(2)}`, 10, 60 + payments.length * 10 + index * 10);
+            });
+
+            doc.text('Total Expenditures: $' + expenditureTotal.toFixed(2), 10, 70 + payments.length * 10 + expenditures.length * 10);
+
+            doc.text('Balance: $' + balance.toFixed(2), 10, 80 + payments.length * 10 + expenditures.length * 10);
+
+            doc.save(`summary_report_${currentMonth}_${currentYear}.pdf`);
+        }
+
+        function downloadMonthlyReport() {
+            const { jsPDF } = window.jspdf;
+            const doc = new jsPDF();
+
+            doc.text('Monthly Report', 10, 10);
+
+            let paymentTotal = payments.reduce((sum, payment) => sum + payment.amount, 0);
+            let expenditureTotal = expenditures.reduce((sum, exp) => sum + exp.amount, 0);
+            let balance = paymentTotal - expenditureTotal;
+
+            doc.text('Payments:', 10, 20);
+            payments.forEach((payment, index) => {
+                doc.text(`${index + 1}. ${payment.name}: ${payment.amount.toFixed(2)} on ${payment.date}`, 10, 30 + index * 10);
+            });
+
+            doc.text('Total Payments: $' + paymentTotal.toFixed(2), 10, 40 + payments.length * 10);
+
+            doc.text('Expenditures:', 10, 50 + payments.length * 10);
+            expenditures.forEach((exp, index) => {
+                doc.text(`${index + 1}. ${exp.date}: ${exp.description} - ${exp.amount.toFixed(2)}`, 10, 60 + payments.length * 10 + index * 10);
+            });
+
+            doc.text('Total Expenditures: $' + expenditureTotal.toFixed(2), 10, 70 + payments.length * 10 + expenditures.length * 10);
+
+            doc.text('Balance: $' + balance.toFixed(2), 10, 80 + payments.length * 10 + expenditures.length * 10);
+
+            doc.save(`monthly_report_${currentMonth}_${currentYear}.pdf`);
+        }
+
+        function checkEndOfMonth() {
+            const today = new Date();
+            if (today.getDate() === new Date(today.getFullYear(), today.getMonth() + 1, 0).getDate()) {
+                document.getElementById('downloadMonthlyReport').classList.remove('hidden');
+                document.getElementById('downloadMonthlyReport').addEventListener('click', downloadMonthlyReport);
+            }
+        }
+
+        document.getElementById('summary').addEventListener('click', showSummary);
+        document.getElementById('downloadReport').addEventListener('click', downloadSummaryReport);
+        document.getElementById('payment').addEventListener('click', () => {
+            document.getElementById('paymentForm').classList.toggle('hidden');
+        });
+    </script>
+</body>
+
+</html>
